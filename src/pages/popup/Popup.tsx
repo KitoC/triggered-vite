@@ -5,7 +5,7 @@ import TriggersList from '@src/shared/components/TriggersList';
 
 const Popup = () => {
   return (
-    <div className="rounded overflow-hidden flex flex-col items-center h-full relative pt-[48px]">
+    <div className="rounded overflow-hidden flex flex-col items-center h-full grow relative pt-[48px]">
       <div
         className="w-full shadow-sm flex justify-center z-10 fixed top-0 left-0 right-0"
         style={{ background: 'var(--color-panel-solid)' }}>

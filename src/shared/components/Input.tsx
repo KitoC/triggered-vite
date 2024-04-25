@@ -8,6 +8,7 @@ interface InputProps {
   type?: string;
   labelClassName?: string;
   disabled?: boolean;
+  autofocus?: boolean;
   className?: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   value: (string | number | readonly string[]) | boolean;
@@ -30,6 +31,7 @@ const Input = (props: InputProps) => {
       })}>
       <span className="font-semibold">{props.label}</span>
       <input
+        id={id}
         {...inputProps}
         {...valueOrChecked}
         className={clsx('border caret-black w-full care p-1 h-8 rounded', inputProps.className, {

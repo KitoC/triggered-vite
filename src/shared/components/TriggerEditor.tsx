@@ -14,6 +14,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { Spinner, Card, Button, IconButton } from '@radix-ui/themes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useRef } from 'react';
 
 const dice = [faDiceOne, faDiceTwo, faDiceThree, faDiceFour, faDiceFive, faDiceSix];
 
@@ -22,6 +23,7 @@ interface TriggerEditorProps {
   trigger?: Trigger;
   onSave: (trigger: Trigger) => void;
   onDelete?: (trigger: Trigger) => void;
+  onCancel?: () => void;
 }
 interface InputConfig {
   id: keyof Trigger;
@@ -29,6 +31,7 @@ interface InputConfig {
   type?: string;
   placeholder?: string;
   disabled?: boolean;
+  autofocus?: boolean;
   Randomizer?: JSX.Element;
 }
 
@@ -40,12 +43,15 @@ const blankTrigger: Trigger = {
 };
 
 const TriggerEditor = (props: TriggerEditorProps) => {
-  const { onSave, onDelete, isSaving } = props;
+  const { onSave, onDelete } = props;
+
+  const formRef = useRef<HTMLFormElement>();
 
   const [isRandomizing, setIsRandomizing] = useState<number>(0);
   const [currentDie, setCurrentDie] = useState<number>(3);
   const [trigger, setTrigger] = useState<Trigger>(props.trigger || blankTrigger);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState<boolean>(!props.trigger);
+  const [isSaving, setIsSaving] = useState(false);
 
   const updateTrigger = useCallback(
     (key: string, value: string | number | readonly string[] | boolean) => {
@@ -56,7 +62,6 @@ const TriggerEditor = (props: TriggerEditorProps) => {
 
   const omittedAttrs = ['previousDetriggers', '_updatedAt', '_rev'];
   const hasChanged = !isEqual(omit(trigger, ...omittedAttrs), omit(props.trigger, ...omittedAttrs));
-  console.log({ trigger: omit(trigger, ...omittedAttrs), propsTrigger: omit(props.trigger, ...omittedAttrs) });
 
   const inputs: InputConfig[] = [
     {
@@ -64,6 +69,7 @@ const TriggerEditor = (props: TriggerEditorProps) => {
       label: 'Trigger',
       placeholder: 'What word or phrase triggers you?',
       disabled: isSaving,
+      autofocus: true,
     },
     {
       id: 'detrigger',
@@ -87,13 +93,21 @@ const TriggerEditor = (props: TriggerEditorProps) => {
     },
   ];
 
-  const onCreate = () => {
-    onSave(trigger);
-    setTrigger(blankTrigger);
-  };
+  const saveTrigger = useCallback(async () => {
+    setIsSaving(true);
+    await onSave?.(trigger);
+    setIsSaving(false);
+  }, [trigger, props.onSave]);
 
   const onCancel = () => {
     setTrigger(props.trigger || blankTrigger);
+    props.onCancel?.();
+  };
+
+  const deleteTrigger = async () => {
+    setIsSaving(true);
+    await onDelete?.(trigger);
+    setIsSaving(false);
   };
 
   const randomize = () => {
@@ -118,6 +132,16 @@ const TriggerEditor = (props: TriggerEditorProps) => {
     };
   }, [isRandomizing, updateTrigger]);
 
+  useEffect(() => {
+    if (!props.trigger && formRef.current) {
+      document.getElementById('trigger').focus();
+    }
+  }, [props.trigger]);
+
+  if (!props.trigger) {
+    console.log('trigger', trigger);
+  }
+
   const getInput = (input: InputConfig) => (
     <div className="flex items-end gap-3">
       <Input
@@ -129,6 +153,7 @@ const TriggerEditor = (props: TriggerEditorProps) => {
         label={input.label}
         placeholder={input.placeholder}
         id={input.id}
+        autofocus={input.autofocus}
         disabled={input.disabled}
         onChange={e => {
           if (input.type === 'checkbox') {
@@ -145,44 +170,54 @@ const TriggerEditor = (props: TriggerEditorProps) => {
   return (
     <div className="relative">
       {isSaving && (
-        <div className="absolute w-full h-full z-10 bg-slate-500/25 flex items-center justify-center rounded pointer-events-none">
+        <div className="absolute w-full h-full z-10 bg-slate-300/25 flex items-center justify-center rounded pointer-events-none">
           <Spinner size="3" />
         </div>
       )}
-      <Card className="shadow-sm p-3 rounded flex flex-col gap-3 overflow-hidden">
-        <div className="flex flex-col w-full md:flex-row md:items-end justify-between gap-3  w-full mb-6">
-          <div className="flex flex-col md:flex-row md:items-end gap-3 w-full">{inputs.map(getInput)}</div>
-        </div>
-
-        <div className="flex flex-col gap-3 items-start">
-          {showAdvancedOptions && <div>{advancedInputs.map(getInput)}</div>}
-
-          <div className="flex items-end justify-end gap-3 w-full">
-            <Button className="mr-auto" onClick={() => setShowAdvancedOptions(!showAdvancedOptions)} variant="surface">
-              {showAdvancedOptions ? 'Hide advanced options' : 'Advanced options'}
-            </Button>
-            {props.trigger ? (
-              <>
-                {onDelete && (
-                  <Button variant="surface" color="red" onClick={() => onDelete(trigger)}>
-                    Delete
-                  </Button>
-                )}
-                <Button disabled={!hasChanged || !!isRandomizing} onClick={onCancel}>
-                  Cancel
-                </Button>
-                <Button disabled={!hasChanged || !!isRandomizing} onClick={() => onSave(trigger)}>
-                  Save
-                </Button>
-              </>
-            ) : (
-              <Button onClick={onCreate} disabled={!trigger.trigger || !trigger.detrigger}>
-                Save
-              </Button>
-            )}
+      <form ref={formRef} onSubmit={e => e.preventDefault()}>
+        <Card className="shadow-sm p-3 rounded flex flex-col gap-3 overflow-hidden">
+          <div className="flex flex-col w-full md:flex-row md:items-end justify-between gap-3  w-full mb-6">
+            <div className="flex flex-col md:flex-row md:items-end gap-3 w-full">{inputs.map(getInput)}</div>
           </div>
-        </div>
-      </Card>
+
+          <div className="flex flex-col gap-3 items-start">
+            {showAdvancedOptions && <div>{advancedInputs.map(getInput)}</div>}
+
+            <div className="flex items-end justify-end gap-3 w-full">
+              <Button
+                className="mr-auto"
+                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                variant="surface">
+                {showAdvancedOptions ? 'Hide advanced options' : 'Advanced options'}
+              </Button>
+              {props.trigger ? (
+                <>
+                  {onDelete && (
+                    <Button variant="surface" color="red" onClick={deleteTrigger}>
+                      Delete
+                    </Button>
+                  )}
+                  <Button disabled={!hasChanged || !!isRandomizing} onClick={onCancel}>
+                    Cancel
+                  </Button>
+                  <Button disabled={!hasChanged || !!isRandomizing} onClick={saveTrigger}>
+                    Save
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button disabled={!hasChanged || !!isRandomizing} onClick={onCancel}>
+                    Cancel
+                  </Button>
+                  <Button disabled={!trigger.trigger || !trigger.detrigger} onClick={saveTrigger}>
+                    Save
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </Card>
+      </form>
     </div>
   );
 };

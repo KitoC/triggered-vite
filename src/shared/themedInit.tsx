@@ -17,7 +17,7 @@ export default function themedInit(Component: React.FC) {
   const root = createRoot(appContainer);
 
   root.render(
-    <Theme className="h-full" accentColor="blue">
+    <Theme className="h-full flex flex-col" accentColor="blue">
       <Component />
     </Theme>,
   );
