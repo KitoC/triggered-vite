@@ -47,12 +47,12 @@ const manifest = {
     // },
   ],
   // devtools_page: 'src/pages/devtools/index.html',
-  // web_accessible_resources: [
-  //   {
-  //     resources: ['assets/js/*.js', 'assets/css/*.css', 'icon-128.png', 'icon-34.png'],
-  //     matches: ['*://*/*'],
-  //   },
-  // ],
+  web_accessible_resources: [
+    {
+      resources: ['assets/js/*.js', 'assets/css/*.css', 'icon-128.png', 'icon-34.png'],
+      matches: ['*://*/*'],
+    },
+  ],
 };
 
 export default manifest;
