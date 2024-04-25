@@ -1,0 +1,10 @@
+{
+  "extensionDescription": {
+    "description": "Extension description",
+    "message": "A tool for replacing trigger words and blurring triggering images."
+  },
+  "extensionName": {
+    "description": "Extension name",
+    "message": "Triggered"
+  }
+}
