@@ -1,6 +1,7 @@
 import { ReactNode, SyntheticEvent } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FontAwesomeIconProps } from '@fortawesome/react-fontawesome';
+import { Button as RButton } from '@radix-ui/themes';
 
 const getBaseStyles = (type: string, color = 'primary') => {
   const styles: { [key: string]: string } = {
@@ -32,9 +33,9 @@ const Button = (props: ButtonProps) => {
   const buttonClassName = `${baseStyles} ${className}`;
 
   return (
-    <button className={buttonClassName} {...buttonProps} onClick={e => props.onClick(e)}>
+    <RButton className={buttonClassName} {...buttonProps} onClick={e => props.onClick(e)}>
       {icon ? <FontAwesomeIcon {...iconProps} className="w-fit h-[32px]" icon={icon} /> : children}
-    </button>
+    </RButton>
   );
 };
 

@@ -1,60 +1,64 @@
-import { useEffect, useState } from 'react';
-import { TriggerDb, TriggerService, Trigger } from '../services/triggers';
+import { useEffect, useState, useCallback } from 'react';
+import { TriggerService, Trigger } from '../services/triggerService';
 import TriggerEditor from './TriggerEditor';
-import Button from './Button';
+import { Button } from '@radix-ui/themes';
 
 const TriggersList = () => {
-  const [triggers, setTriggers] = useState<TriggerDb>({});
+  const [triggers, setTriggers] = useState<Trigger[]>([]);
   const [showNewTrigger, setShowNewTrigger] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     TriggerService.get().then(setTriggers);
   }, []);
 
-  const handleOnTriggerSave = async (trigger: Trigger) => {
-    let prev_dtrggr = undefined;
+  const handleOnTriggerSave = useCallback(
+    async (trigger: Trigger) => {
+      setIsSaving(true);
 
-    if (triggers[trigger.id] && triggers[trigger.id].dtrggr !== trigger.dtrggr) {
-      prev_dtrggr = triggers[trigger.id].dtrggr;
-    }
+      if (trigger._id) {
+        const newTrigger = await TriggerService.patch({ ...trigger, previousDetriggers: [] });
+        setTriggers(triggers.map(trig => (trig._id === trigger._id ? newTrigger : trig)));
+      } else {
+        const newTrigger = await TriggerService.create(trigger);
 
-    const nextTriggers: TriggerDb = {
-      ...triggers,
-      [trigger.id]: { ...trigger, prev_dtrggr },
-    };
+        setTriggers([...triggers, newTrigger]);
+      }
+      setIsSaving(false);
+    },
+    [triggers],
+  );
 
-    await TriggerService.set(nextTriggers);
+  const handleOnTriggerDelete = useCallback(
+    async (trigger: Trigger) => {
+      setIsSaving(true);
 
-    setTriggers(nextTriggers);
-  };
-  const handleOnTriggerDelete = async (trigger: Trigger) => {
-    const newTriggers = { ...triggers };
+      await TriggerService.delete(trigger);
 
-    delete newTriggers[trigger.id];
+      setTriggers(triggers.filter(t => t._id !== trigger._id));
 
-    await TriggerService.set(newTriggers);
-
-    setTriggers(newTriggers);
-  };
-
-  const triggerList = Object.values(triggers);
+      setIsSaving(false);
+    },
+    [triggers],
+  );
 
   return (
     <div className="flex flex-col gap-3 w-full">
-      {triggerList.map(trigger => (
+      {triggers.map(trigger => (
         <TriggerEditor
-          key={trigger.id}
+          key={trigger._id}
           trigger={trigger}
           onSave={handleOnTriggerSave}
           onDelete={handleOnTriggerDelete}
+          isSaving={isSaving}
         />
       ))}
 
-      {(!triggerList.length || showNewTrigger) && (
-        <TriggerEditor key={triggerList.length} onSave={handleOnTriggerSave} />
+      {(!triggers.length || showNewTrigger) && (
+        <TriggerEditor key={triggers.length} onSave={handleOnTriggerSave} isSaving={isSaving} />
       )}
 
-      {!!triggerList.length && (
+      {!!triggers.length && (
         <Button className="mt-4" onClick={() => setShowNewTrigger(true)}>
           Add new Trigger
         </Button>

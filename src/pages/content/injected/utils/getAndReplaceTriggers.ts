@@ -1,5 +1,5 @@
 import replaceAllInstances from './replaceAllInstances';
-import { TriggerService } from '@root/src/shared/services/triggers';
+import { TriggerService } from '@root/src/shared/services/triggerService';
 
 const getAndReplaceTriggers = async () => {
   let shouldResetCursor = false;

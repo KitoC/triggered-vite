@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import Button from './Button';
+// import Button from './Button';
 import Input from './Input';
-import { Trigger } from '../services/triggers';
+import { Trigger } from '../services/triggerService';
 import { capitalize, isEqual, omit, random } from 'lodash';
 import { faker } from '@faker-js/faker';
 import {
@@ -12,10 +12,13 @@ import {
   faDiceFive,
   faDiceSix,
 } from '@fortawesome/free-solid-svg-icons';
+import { Spinner, Card, Button, IconButton } from '@radix-ui/themes';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const dice = [faDiceOne, faDiceTwo, faDiceThree, faDiceFour, faDiceFive, faDiceSix];
 
 interface TriggerEditorProps {
+  isSaving?: boolean;
   trigger?: Trigger;
   onSave: (trigger: Trigger) => void;
   onDelete?: (trigger: Trigger) => void;
@@ -29,14 +32,15 @@ interface InputConfig {
   Randomizer?: JSX.Element;
 }
 
-const blankTrigger = {
-  trggr: '',
-  dtrggr: '',
+const blankTrigger: Trigger = {
+  userId: '',
+  trigger: '',
+  detrigger: '',
   blur_images: false,
 };
 
 const TriggerEditor = (props: TriggerEditorProps) => {
-  const { onSave, onDelete } = props;
+  const { onSave, onDelete, isSaving } = props;
 
   const [isRandomizing, setIsRandomizing] = useState<number>(0);
   const [currentDie, setCurrentDie] = useState<number>(3);
@@ -50,20 +54,27 @@ const TriggerEditor = (props: TriggerEditorProps) => {
     [trigger],
   );
 
-  const hasChanged = !isEqual(omit(trigger, 'prev_dtrggr'), omit(props.trigger, 'prev_dtrggr'));
+  const omittedAttrs = ['previousDetriggers', '_updatedAt', '_rev'];
+  const hasChanged = !isEqual(omit(trigger, ...omittedAttrs), omit(props.trigger, ...omittedAttrs));
+  console.log({ trigger: omit(trigger, ...omittedAttrs), propsTrigger: omit(props.trigger, ...omittedAttrs) });
 
   const inputs: InputConfig[] = [
     {
-      id: 'trggr',
+      id: 'trigger',
       label: 'Trigger',
       placeholder: 'What word or phrase triggers you?',
+      disabled: isSaving,
     },
     {
-      id: 'dtrggr',
+      id: 'detrigger',
       label: 'Replacement',
       placeholder: 'What do you want to replace it with?',
-      disabled: !!isRandomizing,
-      Randomizer: <Button iconProps={{ size: '3x' }} icon={dice[currentDie]} onClick={() => randomize()}></Button>,
+      disabled: !!isRandomizing || isSaving,
+      Randomizer: (
+        <IconButton disabled={isSaving} onClick={() => randomize()}>
+          <FontAwesomeIcon icon={dice[currentDie]} />
+        </IconButton>
+      ),
     },
   ];
 
@@ -72,11 +83,12 @@ const TriggerEditor = (props: TriggerEditorProps) => {
       id: 'blur_images',
       label: 'Blur images',
       type: 'checkbox',
+      disabled: isSaving,
     },
   ];
 
   const onCreate = () => {
-    onSave({ ...trigger, id: Math.random().toString().replace('.', '') });
+    onSave(trigger);
     setTrigger(blankTrigger);
   };
 
@@ -98,7 +110,7 @@ const TriggerEditor = (props: TriggerEditorProps) => {
 
       const randomWord = `${capitalize(faker.word.adjective())} ${faker.animal[animalType]?.()}`;
 
-      updateTrigger('dtrggr', randomWord);
+      updateTrigger('detrigger', randomWord);
     }, 100);
 
     return () => {
@@ -131,38 +143,46 @@ const TriggerEditor = (props: TriggerEditorProps) => {
   );
 
   return (
-    <div className="bg-white shadow-sm p-3 rounded flex flex-col gap-3 overflow-hidden">
-      <div className="flex flex-col w-full md:flex-row md:items-end justify-between gap-3  w-full mb-6">
-        <div className="flex flex-col md:flex-row md:items-end gap-3 w-full">{inputs.map(getInput)}</div>
-      </div>
-      <div className="flex flex-col gap-3 items-start">
-        {showAdvancedOptions && <div>{advancedInputs.map(getInput)}</div>}
+    <div className="relative">
+      {isSaving && (
+        <div className="absolute w-full h-full z-10 bg-slate-500/25 flex items-center justify-center rounded pointer-events-none">
+          <Spinner size="3" />
+        </div>
+      )}
+      <Card className="shadow-sm p-3 rounded flex flex-col gap-3 overflow-hidden">
+        <div className="flex flex-col w-full md:flex-row md:items-end justify-between gap-3  w-full mb-6">
+          <div className="flex flex-col md:flex-row md:items-end gap-3 w-full">{inputs.map(getInput)}</div>
+        </div>
 
-        <div className="flex items-end justify-end gap-3 w-full">
-          <Button className="mr-auto" onClick={() => setShowAdvancedOptions(!showAdvancedOptions)} type="link">
-            {showAdvancedOptions ? 'Hide advanced options' : 'Advanced options'}
-          </Button>
-          {props.trigger ? (
-            <>
-              {onDelete && (
-                <Button type="link" color="danger" onClick={() => onDelete(trigger)}>
-                  Delete
+        <div className="flex flex-col gap-3 items-start">
+          {showAdvancedOptions && <div>{advancedInputs.map(getInput)}</div>}
+
+          <div className="flex items-end justify-end gap-3 w-full">
+            <Button className="mr-auto" onClick={() => setShowAdvancedOptions(!showAdvancedOptions)} variant="surface">
+              {showAdvancedOptions ? 'Hide advanced options' : 'Advanced options'}
+            </Button>
+            {props.trigger ? (
+              <>
+                {onDelete && (
+                  <Button variant="surface" color="red" onClick={() => onDelete(trigger)}>
+                    Delete
+                  </Button>
+                )}
+                <Button disabled={!hasChanged || !!isRandomizing} onClick={onCancel}>
+                  Cancel
                 </Button>
-              )}
-              <Button disabled={!hasChanged || !!isRandomizing} onClick={onCancel}>
-                Cancel
-              </Button>
-              <Button disabled={!hasChanged || !!isRandomizing} onClick={() => onSave(trigger)}>
+                <Button disabled={!hasChanged || !!isRandomizing} onClick={() => onSave(trigger)}>
+                  Save
+                </Button>
+              </>
+            ) : (
+              <Button onClick={onCreate} disabled={!trigger.trigger || !trigger.detrigger}>
                 Save
               </Button>
-            </>
-          ) : (
-            <Button onClick={onCreate} disabled={!trigger.trggr || !trigger.dtrggr}>
-              Save
-            </Button>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };
