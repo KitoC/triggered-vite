@@ -4,6 +4,7 @@ import { attachTwindStyle } from '@src/shared/style/twind';
 import '@radix-ui/themes/styles.css';
 import './global.stye.css';
 import { Theme } from '@radix-ui/themes';
+import AuthProvider from './providers/AuthProvider';
 
 export default function themedInit(Component: React.FC) {
   const appContainer = document.querySelector('#app-container');
@@ -17,8 +18,10 @@ export default function themedInit(Component: React.FC) {
   const root = createRoot(appContainer);
 
   root.render(
-    <Theme className="h-full flex flex-col" accentColor="blue">
-      <Component />
-    </Theme>,
+    <AuthProvider>
+      <Theme className="h-full flex flex-col" accentColor="blue">
+        <Component />
+      </Theme>
+    </AuthProvider>,
   );
 }

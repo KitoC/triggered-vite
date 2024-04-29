@@ -43,6 +43,7 @@ const TriggersList = () => {
     [triggers],
   );
 
+  const isPayingMember = false;
   return (
     <div className="flex flex-col gap-3 w-full grow">
       {isLoading ? (
@@ -51,7 +52,7 @@ const TriggersList = () => {
         </div>
       ) : (
         <>
-          {!!triggers.length && (
+          {!!triggers.length && isPayingMember && (
             <Button disabled={showNewTrigger} className="mb-4" onClick={() => setShowNewTrigger(true)}>
               Add new Trigger
             </Button>

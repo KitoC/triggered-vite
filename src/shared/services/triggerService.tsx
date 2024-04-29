@@ -1,7 +1,5 @@
-import client from '../sanity/client';
+import api from '../api';
 import { UserService } from './userService';
-
-const TYPE = 'trigger';
 
 export interface Trigger {
   _id?: string;
@@ -14,32 +12,42 @@ export interface Trigger {
 
 export type TriggerDb = { [name: string]: Trigger };
 
-const TRIGGERS_QUERY = `*[_type == "trigger" && userId == $userId]`;
-
 export const TriggerService = {
   async get() {
     const userId = await UserService.getUserId();
-    const params = { userId };
 
-    const data = await client.fetch<Trigger[], { userId: string }>(TRIGGERS_QUERY, params);
+    const { data } = await api.sanityProxy.get('/triggers', { headers: { ['x-user-id']: userId } });
 
-    return data;
+    return data.result;
   },
 
   async patch(trigger: Trigger) {
-    const data = await client
-      .patch(trigger._id) // Document ID to patch
-      .set(trigger) // Shallow merge
-      .commit<Trigger>(); // Perform the patch and return a promise
+    const userId = await UserService.getUserId();
+
+    const { data } = await api.sanityProxy.patch(`/triggers/${trigger._id}`, trigger, {
+      headers: { ['x-user-id']: userId },
+    });
+
+    console.log({ data });
 
     return data;
   },
   async create(trigger: Trigger) {
     const userId = await UserService.getUserId();
 
-    return client.create<Trigger>({ ...trigger, userId, _type: TYPE });
+    const { data } = await api.sanityProxy.post(`/triggers`, trigger, {
+      headers: { ['x-user-id']: userId },
+    });
+
+    return data;
   },
   async delete(trigger: Trigger) {
-    return client.delete<Trigger>(trigger._id);
+    const userId = await UserService.getUserId();
+
+    const { data } = await api.sanityProxy.delete(`/triggers/${trigger._id}`, {
+      headers: { ['x-user-id']: userId },
+    });
+
+    return data;
   },
 };
