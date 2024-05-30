@@ -1,4 +1,17 @@
+import api from '../api';
+
 const USER_ID_KEY = 'USER_ID';
+
+export interface AppMeta {
+  name: string;
+  tier: string;
+}
+
+export interface UserMetaData {
+  _id?: string;
+  userId: string;
+  apps: AppMeta[];
+}
 
 function getRandomToken() {
   // E.g. 8 * 32 = 256 bits token
@@ -15,6 +28,13 @@ function getRandomToken() {
 }
 
 export const UserService = {
+  async getUserMetaData() {
+    const userId = await UserService.getUserId();
+
+    const { data } = await api.sanityProxy.get(`/users/${userId}`, { headers: { ['x-user-id']: userId } });
+
+    return data.result;
+  },
   async getUserId(): Promise<string> {
     const items = await chrome.storage.sync.get(USER_ID_KEY);
 

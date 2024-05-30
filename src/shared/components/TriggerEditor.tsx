@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
-// import Button from './Button';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import Input from './Input';
 import { Trigger } from '../services/triggerService';
 import { capitalize, isEqual, omit, random } from 'lodash';
@@ -13,8 +12,9 @@ import {
   faDiceSix,
 } from '@fortawesome/free-solid-svg-icons';
 import { Spinner, Card, Button, IconButton } from '@radix-ui/themes';
+import type { ButtonProps } from '@radix-ui/themes';
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useRef } from 'react';
 
 const dice = [faDiceOne, faDiceTwo, faDiceThree, faDiceFour, faDiceFive, faDiceSix];
 
@@ -42,6 +42,8 @@ const blankTrigger: Trigger = {
   blur_images: false,
 };
 
+const omittedAttrs = ['previousDetriggers', '_updatedAt', '_rev'];
+
 const TriggerEditor = (props: TriggerEditorProps) => {
   const { onSave, onDelete } = props;
 
@@ -60,8 +62,103 @@ const TriggerEditor = (props: TriggerEditorProps) => {
     [trigger],
   );
 
-  const omittedAttrs = ['previousDetriggers', '_updatedAt', '_rev'];
   const hasChanged = !isEqual(omit(trigger, ...omittedAttrs), omit(props.trigger, ...omittedAttrs));
+
+  const saveTrigger = useCallback(async () => {
+    setIsSaving(true);
+
+    await onSave?.(trigger);
+
+    setIsSaving(false);
+  }, [trigger, onSave]);
+
+  const onCancel = () => {
+    setTrigger(props.trigger || blankTrigger);
+    props.onCancel?.();
+  };
+
+  const deleteTrigger = async () => {
+    setIsSaving(true);
+    onDelete?.(trigger);
+  };
+
+  const randomize = () => {
+    setIsRandomizing(random(8, 14));
+  };
+
+  useEffect(() => {
+    if (!isRandomizing) return;
+
+    const timeout = setTimeout(() => {
+      setCurrentDie(random(0, 5));
+      setIsRandomizing(isRandomizing - 1);
+      const animalType = faker.animal.type();
+
+      const randomWord = `${capitalize(faker.word.adjective())} ${animalType}`;
+
+      updateTrigger('detrigger', randomWord);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [isRandomizing, updateTrigger]);
+
+  useEffect(() => {
+    if (!props.trigger && formRef.current) {
+      document.getElementById('trigger').focus();
+    }
+  }, [props.trigger]);
+
+  const getInput = (input: InputConfig) => (
+    <div className="flex items-end gap-3">
+      <Input
+        labelClassName="flex-grow"
+        className="flex-grow"
+        key={input.id}
+        type={input.type}
+        value={trigger[input.id]}
+        label={input.label}
+        placeholder={input.placeholder}
+        id={input.id}
+        autofocus={input.autofocus}
+        disabled={input.disabled}
+        onChange={e => {
+          if (input.type === 'checkbox') {
+            updateTrigger(input.id, e.target.checked);
+          } else {
+            updateTrigger(input.id, e.target.value);
+          }
+        }}
+      />
+      {input.Randomizer && input.Randomizer}
+    </div>
+  );
+
+  const isValid = !!trigger.trigger && !!trigger.detrigger;
+
+  const buttons = [
+    {
+      hidden: !onDelete,
+      label: showAdvancedOptions ? 'Hide advanced options' : 'Advanced options',
+      props: { className: 'mr-auto', onClick: () => setShowAdvancedOptions(!showAdvancedOptions), variant: 'surface' },
+    },
+    {
+      hidden: !onDelete,
+      label: 'Delete',
+      props: { variant: 'surface', color: 'red', onClick: deleteTrigger },
+    },
+    {
+      disabled: !hasChanged,
+      label: 'Cancel',
+      props: { onClick: onCancel },
+    },
+    {
+      disabled: !hasChanged || !isValid,
+      label: 'Save',
+      props: { onClick: saveTrigger },
+    },
+  ];
 
   const inputs: InputConfig[] = [
     {
@@ -93,80 +190,6 @@ const TriggerEditor = (props: TriggerEditorProps) => {
     },
   ];
 
-  const saveTrigger = useCallback(async () => {
-    setIsSaving(true);
-    await onSave?.(trigger);
-    setIsSaving(false);
-  }, [trigger, props.onSave]);
-
-  const onCancel = () => {
-    setTrigger(props.trigger || blankTrigger);
-    props.onCancel?.();
-  };
-
-  const deleteTrigger = async () => {
-    setIsSaving(true);
-    await onDelete?.(trigger);
-    setIsSaving(false);
-  };
-
-  const randomize = () => {
-    setIsRandomizing(random(8, 14));
-  };
-
-  useEffect(() => {
-    if (!isRandomizing) return;
-
-    const timeout = setTimeout(() => {
-      setCurrentDie(random(0, 5));
-      setIsRandomizing(isRandomizing - 1);
-      const animalType = faker.animal.type();
-
-      const randomWord = `${capitalize(faker.word.adjective())} ${faker.animal[animalType]?.()}`;
-
-      updateTrigger('detrigger', randomWord);
-    }, 100);
-
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, [isRandomizing, updateTrigger]);
-
-  useEffect(() => {
-    if (!props.trigger && formRef.current) {
-      document.getElementById('trigger').focus();
-    }
-  }, [props.trigger]);
-
-  if (!props.trigger) {
-    console.log('trigger', trigger);
-  }
-
-  const getInput = (input: InputConfig) => (
-    <div className="flex items-end gap-3">
-      <Input
-        labelClassName="flex-grow"
-        className="flex-grow"
-        key={input.id}
-        type={input.type}
-        value={trigger[input.id]}
-        label={input.label}
-        placeholder={input.placeholder}
-        id={input.id}
-        autofocus={input.autofocus}
-        disabled={input.disabled}
-        onChange={e => {
-          if (input.type === 'checkbox') {
-            updateTrigger(input.id, e.target.checked);
-          } else {
-            updateTrigger(input.id, e.target.value);
-          }
-        }}
-      />
-      {input.Randomizer && input.Randomizer}
-    </div>
-  );
-
   return (
     <div className="relative">
       {isSaving && (
@@ -184,36 +207,16 @@ const TriggerEditor = (props: TriggerEditorProps) => {
             {showAdvancedOptions && <div>{advancedInputs.map(getInput)}</div>}
 
             <div className="flex items-end justify-end gap-3 w-full">
-              <Button
-                className="mr-auto"
-                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-                variant="surface">
-                {showAdvancedOptions ? 'Hide advanced options' : 'Advanced options'}
-              </Button>
-              {props.trigger ? (
-                <>
-                  {onDelete && (
-                    <Button variant="surface" color="red" onClick={deleteTrigger}>
-                      Delete
-                    </Button>
-                  )}
-                  <Button disabled={!hasChanged || !!isRandomizing} onClick={onCancel}>
-                    Cancel
+              {buttons
+                .filter(button => !button.hidden)
+                .map(button => (
+                  <Button
+                    key={button.label}
+                    {...(button.props as ButtonProps)}
+                    disabled={button.disabled || isSaving || !!isRandomizing}>
+                    {button.label}
                   </Button>
-                  <Button disabled={!hasChanged || !!isRandomizing} onClick={saveTrigger}>
-                    Save
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button disabled={!hasChanged || !!isRandomizing} onClick={onCancel}>
-                    Cancel
-                  </Button>
-                  <Button disabled={!trigger.trigger || !trigger.detrigger} onClick={saveTrigger}>
-                    Save
-                  </Button>
-                </>
-              )}
+                ))}
             </div>
           </div>
         </Card>

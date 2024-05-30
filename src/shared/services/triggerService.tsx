@@ -41,7 +41,7 @@ export const TriggerService = {
 
     return data;
   },
-  async delete(trigger: Trigger) {
+  async delete(trigger: Trigger): Promise<Trigger> {
     const userId = await UserService.getUserId();
 
     const { data } = await api.sanityProxy.delete(`/triggers/${trigger._id}`, {
