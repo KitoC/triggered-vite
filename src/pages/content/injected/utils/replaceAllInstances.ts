@@ -3,21 +3,31 @@ const BLUR = 'blur(25px)';
 const replaceAllInstances = async trggrInstance => {
   let shouldResetCursor = false;
   const {
-    trggr,
-    dtrggr,
+    trigger,
+    detrigger,
+    previousDetriggers,
     //  prev_dtrggr,
-    blur_images,
+    blurImages,
     remove_links,
   } = trggrInstance;
-  const regex = new RegExp(`(${trggr})(s)?('s)?(’s)?`, 'gi');
+
+  const regex = new RegExp(`(${trigger})(s)?('s)?(’s)?`, 'gi');
   // const prevRegex = new RegExp(`(${prev_dtrggr})(s)?('s)?(’s)?`, 'gi');
 
   const linksIncluding = {};
 
-  replaceInText(document.body);
-  replaceInText(document.body);
+  document.querySelectorAll('[data-detriggered="true"]').forEach(node => {
+    previousDetriggers.forEach(prev_dtrggr => {
+      const rgx = new RegExp(`(${prev_dtrggr})(s)?('s)?(’s)?`, 'gi');
+      if (node.textContent.match(rgx)) {
+        node.textContent = node.textContent.replace(rgx, detrigger);
+      }
+    });
+  });
 
-  function replaceInText(element) {
+  // replaceInText(document.body);
+
+  const replaceInText = element => {
     for (const node of element.childNodes) {
       const isLink = node.tagName === 'A';
 
@@ -25,11 +35,11 @@ const replaceAllInstances = async trggrInstance => {
         // node.parentNode.removeChild(node);
       }
 
-      if (blur_images && isLink && node?.innerHTML.toLowerCase().match(regex)) {
+      if (blurImages && isLink && node?.innerHTML.toLowerCase().match(regex)) {
         linksIncluding[node?.href] = true;
       }
 
-      if (blur_images && node.tagName === 'IMG' && node?.alt.toLowerCase().match(regex) && node.style.filter !== BLUR) {
+      if (blurImages && node.tagName === 'IMG' && node?.alt.toLowerCase().match(regex) && node.style.filter !== BLUR) {
         node.style.filter = BLUR;
         shouldResetCursor = true;
       }
@@ -40,7 +50,8 @@ const replaceAllInstances = async trggrInstance => {
           break;
         case Node.TEXT_NODE:
           if (node.textContent.match(regex)) {
-            node.textContent = node.textContent.replace(regex, dtrggr);
+            node.parentNode.dataset.detriggered = 'true';
+            node.textContent = node.textContent.replace(regex, detrigger);
             shouldResetCursor = true;
           }
           break;
@@ -48,7 +59,9 @@ const replaceAllInstances = async trggrInstance => {
           replaceInText(node);
       }
     }
-  }
+  };
+
+  replaceInText(document.body);
 
   Object.keys(linksIncluding).forEach(href => {
     const url = href.replace(/^.*\/\/[^/]+/, '');

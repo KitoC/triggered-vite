@@ -20,6 +20,7 @@ const dice = [faDiceOne, faDiceTwo, faDiceThree, faDiceFour, faDiceFive, faDiceS
 
 interface TriggerEditorProps {
   isSaving?: boolean;
+  loading?: boolean;
   trigger?: Trigger;
   onSave: (trigger: Trigger) => void;
   onDelete?: (trigger: Trigger) => void;
@@ -45,7 +46,7 @@ const blankTrigger: Trigger = {
 const omittedAttrs = ['previousDetriggers', '_updatedAt', '_rev'];
 
 const TriggerEditor = (props: TriggerEditorProps) => {
-  const { onSave, onDelete } = props;
+  const { onSave, onDelete, loading } = props;
 
   const formRef = useRef<HTMLFormElement>();
 
@@ -149,12 +150,12 @@ const TriggerEditor = (props: TriggerEditorProps) => {
       props: { variant: 'surface', color: 'red', onClick: deleteTrigger },
     },
     {
-      disabled: !hasChanged,
+      disabled: !hasChanged || loading,
       label: 'Cancel',
       props: { onClick: onCancel },
     },
     {
-      disabled: !hasChanged || !isValid,
+      disabled: !hasChanged || !isValid || loading,
       label: 'Save',
       props: { onClick: saveTrigger },
     },
@@ -165,16 +166,16 @@ const TriggerEditor = (props: TriggerEditorProps) => {
       id: 'trigger',
       label: 'Trigger',
       placeholder: 'What word or phrase triggers you?',
-      disabled: isSaving,
+      disabled: isSaving || loading,
       autofocus: true,
     },
     {
       id: 'detrigger',
       label: 'Replacement',
       placeholder: 'What do you want to replace it with?',
-      disabled: !!isRandomizing || isSaving,
+      disabled: !!isRandomizing || isSaving || loading,
       Randomizer: (
-        <IconButton disabled={isSaving} onClick={() => randomize()}>
+        <IconButton disabled={isSaving || loading} onClick={() => randomize()}>
           <FontAwesomeIcon icon={dice[currentDie]} />
         </IconButton>
       ),
@@ -186,13 +187,13 @@ const TriggerEditor = (props: TriggerEditorProps) => {
       id: 'blur_images',
       label: 'Blur images',
       type: 'checkbox',
-      disabled: isSaving,
+      disabled: isSaving || loading,
     },
   ];
 
   return (
     <div className="relative">
-      {isSaving && (
+      {(isSaving || loading) && (
         <div className="absolute w-full h-full z-10 bg-slate-300/25 flex items-center justify-center rounded pointer-events-none">
           <Spinner size="3" />
         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { TriggerService, Trigger } from '../services/triggerService';
 import TriggerEditor from './TriggerEditor';
-import { Button, Spinner } from '@radix-ui/themes';
+import { Button } from '@radix-ui/themes';
 import { UserMetaData, UserService } from '../services/userService';
 
 const TriggersList = () => {
@@ -28,8 +28,17 @@ const TriggersList = () => {
   const handleOnTriggerSave = useCallback(
     async (trigger: Trigger) => {
       if (trigger._id) {
-        const newTrigger = await TriggerService.patch({ ...trigger, previousDetriggers: [] });
-        setTriggers(triggers.map(trig => (trig._id === trigger._id ? newTrigger : trig)));
+        const previousTrigger = triggers.find(tggr => trigger._id === tggr._id)?.detrigger;
+
+        const updatedPreviousTriggers = [...(trigger.previousDetriggers || []), previousTrigger];
+        const newTrigger = await TriggerService.patch({
+          ...trigger,
+          previousDetriggers: updatedPreviousTriggers.slice(-2, updatedPreviousTriggers.length),
+        });
+        const updatedTriggers = triggers.map(trig => (trig._id === trigger._id ? newTrigger : trig));
+        setTriggers(updatedTriggers);
+
+        chrome.storage.sync.set({ triggers: updatedTriggers });
       } else {
         const newTrigger = await TriggerService.create(trigger);
 
@@ -74,9 +83,7 @@ const TriggersList = () => {
         {USER_TIER - triggers.length} of {USER_TIER} free triggers left
       </p>
       {isLoading ? (
-        <div className="flex items-center justify-center grow">
-          <Spinner size="3" />
-        </div>
+        <TriggerEditor loading onSave={() => null} onCancel={() => null} />
       ) : (
         <>
           {!!triggers.length && canCreateNewTrigger && (
